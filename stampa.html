@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>Cartellino - prototipo stampa</title>
+<style>
+
+  /* =========================================================================
+     GUIDA RAPIDA — COME CALIBRARE QUESTO FILE SU UN CARTELLINO REALE
+     =========================================================================
+
+     1) MISURA IL CARTELLINO FISICO con un righello (in millimetri, è
+        più comodo che in pollici/inch per i nostri scopi).
+        Esempio: se il cartellino è 100mm x 70mm, imposta:
+          --card-w: 100mm;
+          --card-h: 70mm;
+
+     2) USA i mm OVUNQUE in questo file (non px, non rem) per le misure
+        fisiche del cartellino e per il posizionamento dei testi.
+        Il motivo: 1mm in CSS = 1mm reale in stampa (al netto della
+        precisione della stampante), mentre px/rem dipendono dal DPI
+        e dallo zoom del browser e NON garantiscono coerenza in stampa.
+        rem/em restano invece comodi per le DIMENSIONI DEI CARATTERI
+        (font-size), perché lì vuoi scalare il testo in proporzione,
+        non vincolarlo a un mm assoluto.
+
+     3) POSIZIONAMENTO DEI CAMPI (nome, sinonimo, commestibilità ecc.):
+        ogni blocco di testo qui sotto (.field) ha "top" e "left"
+        espressi in mm rispetto all'angolo in alto a sinistra del
+        cartellino (il contenitore .card è il sistema di riferimento,
+        position: relative).
+
+        Per misurare le posizioni su un cartellino reale:
+        a) stampa (o fotografa in piano, dall'alto, senza prospettiva)
+           il cartellino vuoto;
+        b) appoggia un righello trasparente sopra, oppure importa la
+           foto in uno strumento con righello (anche LibreOffice Draw
+           va benissimo: inserisci l'immagine, attiva la griglia/righelli
+           in mm, e leggi le coordinate del bordo di ogni "casella" di
+           testo prestampata);
+        c) riporta qui i valori letti: distanza dal bordo sinistro = left,
+           distanza dal bordo superiore = top.
+
+     4) VERIFICA SCALA IMMAGINE DI SFONDO:
+        l'immagine dello sfondo (il cartellino vuoto scansionato) deve
+        essere stampata esattamente alle dimensioni --card-w x --card-h,
+        altrimenti le caselle prestampate non coincideranno più con i
+        .field posizionati in CSS. Qui sotto l'<img> ha width/height
+        forzate alle stesse variabili --card-w/--card-h: se la tua
+        immagine ha proporzioni diverse dal cartellino reale, verrà
+        deformata — meglio ritagliare/scansionare l'immagine già nel
+        rapporto corretto (o aggiungere object-fit: contain e accettare
+        eventuali bordi bianchi).
+
+     5) STAMPA SU A4 E RITAGLIO:
+        il foglio resta A4 (più compatibile con stampanti/driver di
+        tutti i soci), il cartellino è un riquadro di dimensione fissa
+        posizionato in alto a sinistra (margine di stampa minimo), così
+        è facile ritagliarlo con margine costante. Se preferisci centrato
+        in pagina, vedi il commento su .page più sotto.
+
+     ========================================================================= */
+
+  :root {
+    /* --- DIMENSIONI FISICHE DEL CARTELLINO: da calibrare (punto 1) --- */
+    --card-w: 100mm;
+    --card-h: 70mm;
+
+    /* Margine di sicurezza dal bordo del foglio A4, utile per il ritaglio */
+    --page-margin: 10mm;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+  }
+
+  /* =========================================================================
+     IMPOSTAZIONE PAGINA DI STAMPA
+     A4 esplicito: più affidabile cross-browser rispetto a formati custom.
+     Se in futuro vuoi stampare DIRETTAMENTE in formato cartellino (no A4 +
+     ritaglio), cambia qui "size: A4;" in "size: var(--card-w) var(--card-h);"
+     e margin: 0 — ma vale solo se TUTTI i soci hanno una stampante in grado
+     di caricare quel formato carta custom, altrimenti meglio A4+ritaglio.
+     ========================================================================= */
+  @page {
+    size: A4;
+    margin: 0;
+  }
+
+  .page {
+    width: 210mm;
+    min-height: 297mm;
+    padding: var(--page-margin);
+
+    /* Per centrare il cartellino in pagina invece che in alto a sinistra,
+       sostituisci con: display:flex; align-items:center; justify-content:center; */
+  }
+
+  /* =========================================================================
+     IL CARTELLINO VERO E PROPRIO
+     position: relative -> è il sistema di coordinate per i .field assoluti
+     ========================================================================= */
+  .card {
+    position: relative;
+    width: var(--card-w);
+    height: var(--card-h);
+    overflow: hidden; /* nel caso un testo lungo sconfini, lo taglia invece
+                          di rompere il layout: meglio accorgersene subito */
+  }
+
+  /* Sfondo = <img> reale, NON background-image (vedi nota stampa colori) */
+  .card-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: var(--card-w);
+    height: var(--card-h);
+    object-fit: fill; /* vedi punto 4 sopra: cambia in 'contain' se le
+                          proporzioni dell'immagine non coincidono */
+    z-index: 0;
+    /* In stampa, forziamo comunque la resa fedele di immagini/colori: */
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* =========================================================================
+     CAMPI DI TESTO
+     Ogni .field è posizionato in mm assoluti rispetto a .card.
+     Modifica top/left per ciascun campo qui sotto, dopo aver misurato
+     il cartellino reale (punto 3 della guida).
+     ========================================================================= */
+  .field {
+    position: absolute;
+    z-index: 1;
+    font-family: "Times New Roman", Georgia, serif; /* placeholder, sostituisci
+                          col font del vostro cartellino se rilevante */
+    line-height: 1.15;
+  }
+
+  /* --- Nome scientifico originale / binomio storico ------------------- */
+  .field--nome-originale {
+    top: 12mm;
+    left: 8mm;
+    width: 84mm;           /* larghezza massima del blocco: aiuta il wrap
+                                del testo invece di farlo sconfinare */
+    font-size: 1.15rem;    /* rem ok qui: è dimensione tipografica, non
+                                posizione fisica */
+    font-style: italic;
+    font-weight: bold;
+  }
+
+  /* --- Etichetta "nome corrente:" --------------------------------------- */
+  .field--label-corrente {
+    top: 28mm;
+    left: 8mm;
+    font-size: 0.7rem;
+    color: #444;
+    text-transform: lowercase;
+    letter-spacing: 0.02em;
+  }
+
+  /* --- Nome corrente (sinonimo aggiornato, da DB / Index Fungorum) ----- */
+  .field--nome-corrente {
+    top: 32mm;
+    left: 8mm;
+    width: 84mm;
+    font-size: 1.05rem;
+    font-style: italic;
+  }
+
+  /* --- Commestibilità ---------------------------------------------------
+     Campo "sensibile": messo in evidenza, posizione tipicamente fissa
+     in basso o in un riquadro dedicato del cartellino prestampato. */
+  .field--commestibilita {
+    top: 52mm;
+    left: 8mm;
+    width: 84mm;
+    font-size: 0.95rem;
+    font-weight: bold;
+    letter-spacing: 0.03em;
+    /* colore d'allerta solo come placeholder: valutate se il cartellino
+       reale ha già una casella colorata prestampata per questo campo */
+    color: #b30000;
+  }
+
+  /* =========================================================================
+     SOLO PER PROTOTIPAZIONE A SCHERMO (non influisce sulla stampa):
+     mostra i bordi dei campi e del cartellino per aiutarti ad allineare
+     visivamente mentre calibri i mm. Rimuovi/commenta @media screen
+     quando hai finito di tarare le posizioni.
+     ========================================================================= */
+  @media screen {
+    body { background: #eee; }
+    .page { background: white; margin: 10mm auto; box-shadow: 0 0 8px rgba(0,0,0,.2); }
+    .card { outline: 1px dashed #09c; }
+    .field { outline: 1px dotted rgba(255,0,0,.5); }
+  }
+
+  @media print {
+    .page { box-shadow: none; margin: 0; }
+  }
+
+</style>
+</head>
+<body>
+
+  <div class="page">
+    <div class="card">
+
+      <!-- ============================================================
+           SFONDO: sostituire src con il file reale del cartellino vuoto
+           (es. scansione a 300dpi, ritagliata esattamente al bordo del
+           cartellino). Per ora un SVG placeholder generato inline che
+           disegna solo un rettangolo con cornice, per visualizzare i
+           bordi del cartellino durante la calibrazione.
+           ============================================================ -->
+      <img
+        class="card-bg"
+        alt="Sfondo cartellino vuoto"
+        src="data:image/svg+xml;utf8,
+          <svg xmlns='http://www.w3.org/2000/svg' width='400' height='280'>
+            <rect x='2' y='2' width='396' height='276' fill='%23fffdf7' stroke='%23999' stroke-width='2'/>
+            <text x='200' y='270' font-size='10' fill='%23bbb' text-anchor='middle'>placeholder sfondo cartellino — sostituire con immagine reale</text>
+          </svg>"
+      >
+
+      <div class="field field--nome-originale">
+        Boletus luridus Schaeff. 1774
+      </div>
+
+      <div class="field field--label-corrente">
+        nome corrente:
+      </div>
+
+      <div class="field field--nome-corrente">
+        Suillellus luridus (Schaeff.) Murrill 1909
+      </div>
+
+      <div class="field field--commestibilita">
+        NON COMMESTIBILE
+      </div>
+
+    </div>
+  </div>
+
+</body>
+</html>
